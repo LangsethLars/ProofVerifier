@@ -1,0 +1,16 @@
+/*
+!/.gitignore
+!/README.md
+
+!/ProofVerifier.sln
+!/ProofVerifier.vcxproj
+!/ProofVerifier.vcxproj.filters
+
+!/*.cpp
+!/*.h
+
+!/src
+!/src/*
+
+!/Test
+!/Test/*
