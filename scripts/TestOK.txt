@@ -1,0 +1,8 @@
+x;
+Type;
+(x);
+f x;
+f x y;
+(f x) y;
+Type x;
+x Type;
