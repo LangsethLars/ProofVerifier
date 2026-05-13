@@ -1,0 +1,40 @@
+Theorem test_no_params : Prop.True
+Proof
+End
+
+Theorem test_one_param (p : Prop) : p
+Proof
+End
+
+Theorem test_two_params (p : Prop) (q : Prop) : Prop.And(p q)
+Proof
+End
+
+Theorem test_bool_param (b : Bool) : Bool.Eq(b b)
+Proof
+End
+
+Theorem test_mixed (p : Prop) (b : Bool) (q : Prop) : Prop.And(p q)
+Proof
+End
+
+Theorem trivial_test : Prop.True
+Proof
+  Trivial
+  Trivial
+End
+
+Theorem refl_test1 : Bool.Eq(Bool.And(Bool.True Bool.False) Bool.False)
+Proof
+  Refl
+End
+
+Theorem refl_test2 : Bool.Eq(Bool.And(Bool.True Bool.False) Bool.Not(Bool.False))
+Proof
+  Refl
+End
+
+Theorem refl_test3 (b : Bool) : Bool.Eq(Bool.And(Bool.True Bool.False) b)
+Proof
+  Refl
+End
