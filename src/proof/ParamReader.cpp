@@ -101,8 +101,8 @@ void ParamReader::readSingleParam(ParseTreeIterator& it, ParamManager& paramMgr)
 }
 
 ParamType ParamReader::tokenToParamType(int tokenId) {
-    if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Bool)) {
-        return ParamType::Bool;
+    if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Int)) {
+        return ParamType::Int;
     } else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Prop)) {
         return ParamType::Prop;
     } else {

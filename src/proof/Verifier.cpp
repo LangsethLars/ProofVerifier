@@ -87,7 +87,11 @@ void Verifier::verifyTheorem(ParseTreeIterator& itNode) {
     }
     itProofBlock.moveToNextSibling();
 
-    verifyProofStepList(itProofBlock, propExpr);
+    // Build the initial proof context: goal is the theorem statement, no assumptions yet.
+    ProofContext ctx;
+    ctx.goal = propExpr;
+
+    verifyProofStepList(itProofBlock, ctx);
 
     if (itProofBlock.getTokenIdNoThrow() != int(Proof_Lexer::TokenId::_End)) {
         throw std::runtime_error("Expected _End at end of proof block.");
@@ -99,34 +103,30 @@ void Verifier::verifyTheorem(ParseTreeIterator& itNode) {
     m_paramMgr.popScope();
 }
 
-void Verifier::verifyProofStepList(ParseTreeIterator& it, const PropExprPtr& propExpr) {
+void Verifier::verifyProofStepList(ParseTreeIterator& it, ProofContext& ctx) {
     // Skip <ProofStepList> = <ProofStep> <ProofStepList> | ;
     // Skip <ProofStep> = <AssumeStep> | <HaveStep> | <ExactStep> | <ShowStep>
     //                  | <CasesStep>  | <ReflStep>  | <TrivialStep>;
     // Stops when it meets _End or _Case (not a <ProofStep> start).
-    while (it.getTokenIdNoThrow() != int(Proof_Lexer::TokenId::_End) &&
-           it.getTokenIdNoThrow() != int(Proof_Lexer::TokenId::_Case)) {
+    while (it.getTokenIdNoThrow() != int(Proof_Lexer::TokenId::_End)) {
         switch (it.getVariableIdNoThrow()) {
             case int(Proof_Parser::VariableId::_AssumeStep_):
-                verifyAssumeStep(it);
+                verifyAssumeStep(it, ctx);
                 break;
             case int(Proof_Parser::VariableId::_HaveStep_):
-                verifyHaveStep(it);
+                verifyHaveStep(it, ctx);
                 break;
             case int(Proof_Parser::VariableId::_ExactStep_):
-                verifyExactStep(it);
+                verifyExactStep(it, ctx);
                 break;
             case int(Proof_Parser::VariableId::_ShowStep_):
-                verifyShowStep(it);
-                break;
-            case int(Proof_Parser::VariableId::_CasesStep_):
-                verifyCasesStep(it, propExpr);
+                verifyShowStep(it, ctx);
                 break;
             case int(Proof_Parser::VariableId::_ReflStep_):
-                verifyReflStep(it, propExpr);
+                verifyReflStep(it, ctx);
                 break;
             case int(Proof_Parser::VariableId::_TrivialStep_):
-                verifyTrivialStep(it, propExpr);
+                verifyTrivialStep(it, ctx);
                 break;
             default:
                 throw std::runtime_error("Unknown proof step type.");
@@ -135,120 +135,76 @@ void Verifier::verifyProofStepList(ParseTreeIterator& it, const PropExprPtr& pro
     }
 }
 
-void Verifier::verifyAssumeStep(ParseTreeIterator& it) {
+void Verifier::verifyAssumeStep(ParseTreeIterator& it, ProofContext& ctx) {
     // Rule <AssumeStep> = _Assume IDENT COLON <PropExpr>;
-    std::cout << "    Assume step" << std::endl;
+    // Adds a proof assumption h : P to the context.
+    ParseTreeIterator itStep = it.firstChild();
+
+    if (itStep.getTokenIdNoThrow() != int(Proof_Lexer::TokenId::_Assume)) {
+        throw std::runtime_error("Expected _Assume at start of assume step.");
+    }
+    itStep.moveToNextSibling();
+
+    if (itStep.getTokenIdNoThrow() != int(Proof_Lexer::TokenId::IDENT)) {
+        throw std::runtime_error("Expected IDENT for hypothesis name in assume step.");
+    }
+    std::string hypName = itStep.getLexeme();
+    itStep.moveToNextSibling();
+
+    if (itStep.getTokenIdNoThrow() != int(Proof_Lexer::TokenId::COLON)) {
+        throw std::runtime_error("Expected COLON in assume step.");
+    }
+    itStep.moveToNextSibling();
+
+    if (itStep.getVariableIdNoThrow() != int(Proof_Parser::VariableId::_PropExpr_)) {
+        throw std::runtime_error("Expected <PropExpr> for hypothesis type in assume step.");
+    }
+    PropExprPtr hypType = PropExprReader::readPropExpr(itStep);
+
+    ctx.addAssumption(hypName, hypType);
+    std::cout << "    Assume " << hypName << " : " << hypType->toString() << std::endl;
 }
 
-void Verifier::verifyHaveStep(ParseTreeIterator& it) {
+void Verifier::verifyHaveStep(ParseTreeIterator& it, ProofContext& ctx) {
     // Rule <HaveStep> = _Have IDENT COLON <PropExpr> COLONEQUAL <ProofExpr>;
     std::cout << "    Have step" << std::endl;
 }
 
-void Verifier::verifyExactStep(ParseTreeIterator& it) {
+void Verifier::verifyExactStep(ParseTreeIterator& it, ProofContext& ctx) {
     // Rule <ExactStep> = _Exact <ProofExpr>;
     std::cout << "    Exact step" << std::endl;
 }
 
-void Verifier::verifyShowStep(ParseTreeIterator& it) {
+void Verifier::verifyShowStep(ParseTreeIterator& it, ProofContext& ctx) {
     // Rule <ShowStep> = _Show <PropExpr>;
     std::cout << "    Show step" << std::endl;
 }
 
-void Verifier::verifyCasesStep(ParseTreeIterator& it, const PropExprPtr& propExpr) {
-    // Rule <CasesStep>    = _Cases IDENT <BoolCaseList> _End;
-    // Rule <BoolCaseList> = <BoolCase> <BoolCase>;
-    // Rule <BoolCase>     = _Case <BoolValue> FAT_ARROW <ProofStepList>;
-    // Rule <BoolValue>    = _Bool_False | _Bool_True;
-    std::cout << "    Cases step" << std::endl;
-
-    ParseTreeIterator itCases = it.firstChild();
-
-    if (itCases.getTokenIdNoThrow() != int(Proof_Lexer::TokenId::_Cases)) {
-        throw std::runtime_error("Expected _Cases at start of cases step.");
-    }
-    itCases.moveToNextSibling();
-
-    if (itCases.getTokenIdNoThrow() != int(Proof_Lexer::TokenId::IDENT)) {
-        throw std::runtime_error("Expected IDENT (variable name) after _Cases.");
-    }
-    std::string casesVar = itCases.getLexeme();
-    std::cout << "      Cases on variable: " << casesVar << std::endl;
-    itCases.moveToNextSibling();
-
-    // <BoolCaseList> = <BoolCase> <BoolCase>
-    if (itCases.getVariableIdNoThrow() != int(Proof_Parser::VariableId::_BoolCaseList_)) {
-        throw std::runtime_error("Expected <BoolCaseList> in cases step.");
-    }
-
-    ParseTreeIterator itCaseList = itCases.firstChild();
-
-    // Process each <BoolCase>
-    for (int caseIndex = 0; caseIndex < 2; ++caseIndex) {
-        if (itCaseList.getVariableIdNoThrow() != int(Proof_Parser::VariableId::_BoolCase_)) {
-            throw std::runtime_error("Expected <BoolCase> in case list.");
-        }
-
-        ParseTreeIterator itCase = itCaseList.firstChild();
-
-        if (itCase.getTokenIdNoThrow() != int(Proof_Lexer::TokenId::_Case)) {
-            throw std::runtime_error("Expected _Case at start of bool case.");
-        }
-        itCase.moveToNextSibling();
-
-        // <BoolValue> = _Bool_False | _Bool_True
-        if (itCase.getVariableIdNoThrow() != int(Proof_Parser::VariableId::_BoolValue_)) {
-            throw std::runtime_error("Expected <BoolValue> after _Case.");
-        }
-        ParseTreeIterator itBoolValue = itCase.firstChild();
-        int boolValueToken = itBoolValue.getTokenIdNoThrow();
-        std::string boolValueStr = (boolValueToken == int(Proof_Lexer::TokenId::_Bool_True)) ? "Bool.True" : "Bool.False";
-        std::cout << "      Case " << boolValueStr << ":" << std::endl;
-        itCase.moveToNextSibling();
-
-        if (itCase.getTokenIdNoThrow() != int(Proof_Lexer::TokenId::FAT_ARROW)) {
-            throw std::runtime_error("Expected FAT_ARROW (=>) after <BoolValue> in case.");
-        }
-        itCase.moveToNextSibling();
-
-        // Recursively verify the nested <ProofStepList>
-        verifyProofStepList(itCase, propExpr);
-
-        if (caseIndex == 0) {
-            itCaseList.moveToNextSibling();
-        }
-    }
-
-    itCases.moveToNextSibling();
-
-    if (itCases.getTokenIdNoThrow() != int(Proof_Lexer::TokenId::_End)) {
-        throw std::runtime_error("Expected _End at end of cases step.");
-    }
-}
-
-void Verifier::verifyReflStep(ParseTreeIterator& it, const PropExprPtr& propExpr) {
+void Verifier::verifyReflStep(ParseTreeIterator& it, ProofContext& ctx) {
     // Rule <ReflStep> = _Refl;
-    if (propExpr->type == PropExprType::BoolEq) {
-        BoolExprPtr boolLeft = propExpr->boolLeft, boolRight = propExpr->boolRight;
-        BoolExprEval evalLeft = boolLeft->evaluate();
-        BoolExprEval evalRight = boolRight->evaluate();
-        if (evalLeft == BoolExprEval::Error || evalRight == BoolExprEval::Error) {
-            std::cout << "    Refl step invalid (error evaluating boolean expressions)" << std::endl;
-        } else if (evalLeft == evalRight) {
+    // Closes goal Prop.Int.Eq(a b) if evaluate(a) == evaluate(b).
+    const PropExprPtr& goal = ctx.goal;
+    if (goal->type == PropExprType::IntEq) {
+        auto evalLeft  = goal->intLeft->evaluate();
+        auto evalRight = goal->intRight->evaluate();
+        if (!evalLeft || !evalRight) {
+            std::cout << "    Refl step invalid (cannot evaluate — unsubstituted variables remain)" << std::endl;
+        } else if (*evalLeft == *evalRight) {
             std::cout << "    Refl step valid" << std::endl;
         } else {
-            std::cout << "    Refl step invalid (boolean expressions do not evaluate to the same value)" << std::endl;
+            std::cout << "    Refl step invalid (" << *evalLeft << " != " << *evalRight << ")" << std::endl;
         }
     } else {
-        std::cout << "    Refl step invalid (statement is not BoolEq)" << std::endl;
+        std::cout << "    Refl step invalid (goal is not Prop.Int.Eq)" << std::endl;
     }
 }
 
-void Verifier::verifyTrivialStep(ParseTreeIterator& it, const PropExprPtr& propExpr) {
+void Verifier::verifyTrivialStep(ParseTreeIterator& it, ProofContext& ctx) {
     // Rule <TrivialStep> = _Trivial;
-    if (propExpr->type == PropExprType::True) {
+    // Closes goal Prop.True.
+    if (ctx.goal->type == PropExprType::True) {
         std::cout << "    Trivial step valid" << std::endl;
     } else {
-        std::cout << "    Trivial step invalid (statement is not True)" << std::endl;
+        std::cout << "    Trivial step invalid (goal is not Prop.True)" << std::endl;
     }
 }

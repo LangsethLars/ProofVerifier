@@ -101,6 +101,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -131,6 +132,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -147,6 +149,7 @@
     <ClCompile Include="src\parser\ParseTreeIterator.cpp" />
     <ClCompile Include="src\parser\Proof_Lexer.cpp" />
     <ClCompile Include="src\parser\Proof_Parser.cpp" />
+    <ClCompile Include="src\proof\IntExpr.cpp" />
     <ClCompile Include="src\proof\ParamManager.cpp" />
     <ClCompile Include="src\proof\ParamReader.cpp" />
     <ClCompile Include="src\proof\PropExpr.cpp" />
@@ -164,8 +167,10 @@
     <ClInclude Include="src\parser\ParseTreeIterator.h" />
     <ClInclude Include="src\parser\Proof_Lexer.h" />
     <ClInclude Include="src\parser\Proof_Parser.h" />
+    <ClInclude Include="src\proof\IntExpr.h" />
     <ClInclude Include="src\proof\ParamManager.h" />
     <ClInclude Include="src\proof\ParamReader.h" />
+    <ClInclude Include="src\proof\ProofContext.h" />
     <ClInclude Include="src\proof\PropExpr.h" />
     <ClInclude Include="src\proof\PropExprReader.h" />
     <ClInclude Include="src\proof\Verifier.h" />

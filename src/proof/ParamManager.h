@@ -8,14 +8,14 @@
 
 // Parameter types
 enum class ParamType {
-    Bool,
+    Int,
     Prop
 };
 
 // String representation of parameter types
 inline std::string paramTypeToString(ParamType type) {
     switch (type) {
-        case ParamType::Bool: return "Bool";
+        case ParamType::Int:  return "Int";
         case ParamType::Prop: return "Prop";
     }
     return "Unknown";

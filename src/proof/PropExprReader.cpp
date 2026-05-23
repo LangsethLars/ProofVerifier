@@ -1,5 +1,6 @@
-#include "PropExprReader.h"
+﻿#include "PropExprReader.h"
 #include <stdexcept>
+#include <cstdlib>
 
 int PropExprReader::getTokenId(const ParseTreeIterator& it) {
     return it.getTokenIdNoThrow();
@@ -19,21 +20,18 @@ PropExprPtr PropExprReader::readPropExpr(ParseTreeIterator& it) {
     //     | _Prop_Or      OPEN_PAR <PropExpr> <PropExpr> CLOSE_PAR
     //     | _Prop_Implies OPEN_PAR <PropExpr> <PropExpr> CLOSE_PAR
     //     | _Prop_Iff     OPEN_PAR <PropExpr> <PropExpr> CLOSE_PAR
-    //     | _Bool_Eq      OPEN_PAR <BoolExpr> <BoolExpr> CLOSE_PAR;
+    //     | _Prop_Int_Eq  OPEN_PAR <IntExpr> <IntExpr> CLOSE_PAR;
 
     if (getVariableId(it) != static_cast<int>(Proof_Parser::VariableId::_PropExpr_)) {
         throw std::runtime_error("Expected <PropExpr> node");
     }
 
-    // Move to first child to see which production we have
     ParseTreeIterator child = it.firstChild();
     int tokenId = getTokenId(child);
     int line = child.isTerminal() ? child.getToken().lineNumber : -1;
 
     if (tokenId == static_cast<int>(Proof_Lexer::TokenId::IDENT)) {
-        // Prop variable
-        std::string name = child.getLexeme();
-        return PropExpr::makeVar(name, line);
+        return PropExpr::makeVar(child.getLexeme(), line);
     }
     else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Prop_True)) {
         return PropExpr::makeTrue(line);
@@ -42,124 +40,93 @@ PropExprPtr PropExprReader::readPropExpr(ParseTreeIterator& it) {
         return PropExpr::makeFalse(line);
     }
     else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Prop_Not)) {
-        // _Prop_Not OPEN_PAR <PropExpr> CLOSE_PAR
-        child.moveToNextSibling(); // Skip _Prop_Not
-        child.moveToNextSibling(); // Skip OPEN_PAR
-
-        PropExprPtr arg = readPropExpr(child);
-        return PropExpr::makeNot(arg, line);
+        child.moveToNextSibling(); // skip _Prop_Not
+        child.moveToNextSibling(); // skip OPEN_PAR
+        return PropExpr::makeNot(readPropExpr(child), line);
     }
     else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Prop_And)) {
-        // _Prop_And OPEN_PAR <PropExpr> <PropExpr> CLOSE_PAR
-        child.moveToNextSibling(); // Skip _Prop_And
-        child.moveToNextSibling(); // Skip OPEN_PAR
-
+        child.moveToNextSibling(); child.moveToNextSibling();
         PropExprPtr left = readPropExpr(child);
         child.moveToNextSibling();
-        PropExprPtr right = readPropExpr(child);
-        return PropExpr::makeAnd(left, right, line);
+        return PropExpr::makeAnd(left, readPropExpr(child), line);
     }
     else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Prop_Or)) {
-        // _Prop_Or OPEN_PAR <PropExpr> <PropExpr> CLOSE_PAR
-        child.moveToNextSibling(); // Skip _Prop_Or
-        child.moveToNextSibling(); // Skip OPEN_PAR
-
+        child.moveToNextSibling(); child.moveToNextSibling();
         PropExprPtr left = readPropExpr(child);
         child.moveToNextSibling();
-        PropExprPtr right = readPropExpr(child);
-        return PropExpr::makeOr(left, right, line);
+        return PropExpr::makeOr(left, readPropExpr(child), line);
     }
     else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Prop_Implies)) {
-        // _Prop_Implies OPEN_PAR <PropExpr> <PropExpr> CLOSE_PAR
-        child.moveToNextSibling(); // Skip _Prop_Implies
-        child.moveToNextSibling(); // Skip OPEN_PAR
-
+        child.moveToNextSibling(); child.moveToNextSibling();
         PropExprPtr left = readPropExpr(child);
         child.moveToNextSibling();
-        PropExprPtr right = readPropExpr(child);
-        return PropExpr::makeImplies(left, right, line);
+        return PropExpr::makeImplies(left, readPropExpr(child), line);
     }
     else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Prop_Iff)) {
-        // _Prop_Iff OPEN_PAR <PropExpr> <PropExpr> CLOSE_PAR
-        child.moveToNextSibling(); // Skip _Prop_Iff
-        child.moveToNextSibling(); // Skip OPEN_PAR
-
+        child.moveToNextSibling(); child.moveToNextSibling();
         PropExprPtr left = readPropExpr(child);
         child.moveToNextSibling();
-        PropExprPtr right = readPropExpr(child);
-        return PropExpr::makeIff(left, right, line);
+        return PropExpr::makeIff(left, readPropExpr(child), line);
     }
-    else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Bool_Eq)) {
-        // _Bool_Eq OPEN_PAR <BoolExpr> <BoolExpr> CLOSE_PAR
-        child.moveToNextSibling(); // Skip _Bool_Eq
-        child.moveToNextSibling(); // Skip OPEN_PAR
-
-        BoolExprPtr left = readBoolExpr(child);
+    else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Prop_Int_Eq)) {
+        // _Prop_Int_Eq OPEN_PAR <IntExpr> <IntExpr> CLOSE_PAR
+        child.moveToNextSibling(); child.moveToNextSibling();
+        IntExprPtr left = readIntExpr(child);
         child.moveToNextSibling();
-        BoolExprPtr right = readBoolExpr(child);
-        return PropExpr::makeBoolEq(left, right, line);
+        return PropExpr::makeIntEq(left, readIntExpr(child), line);
     }
 
     throw std::runtime_error("Unknown PropExpr production");
 }
 
-BoolExprPtr PropExprReader::readBoolExpr(ParseTreeIterator& it) {
-    // Rule <BoolExpr>
+IntExprPtr PropExprReader::readIntExpr(ParseTreeIterator& it) {
+    // Rule <IntExpr>
     //     = IDENT
-    //     | _Bool_True
-    //     | _Bool_False
-    //     | _Bool_Not   OPEN_PAR <BoolExpr> CLOSE_PAR
-    //     | _Bool_And   OPEN_PAR <BoolExpr> <BoolExpr> CLOSE_PAR
-    //     | _Bool_Or    OPEN_PAR <BoolExpr> <BoolExpr> CLOSE_PAR;
+    //     | NUMBER
+    //     | _Int_Neg  OPEN_PAR <IntExpr>            CLOSE_PAR
+    //     | _Int_Add  OPEN_PAR <IntExpr> <IntExpr>  CLOSE_PAR
+    //     | _Int_Sub  OPEN_PAR <IntExpr> <IntExpr>  CLOSE_PAR
+    //     | _Int_Mul  OPEN_PAR <IntExpr> <IntExpr>  CLOSE_PAR;
 
-    if (getVariableId(it) != static_cast<int>(Proof_Parser::VariableId::_BoolExpr_)) {
-        throw std::runtime_error("Expected <BoolExpr> node");
+    if (getVariableId(it) != static_cast<int>(Proof_Parser::VariableId::_IntExpr_)) {
+        throw std::runtime_error("Expected <IntExpr> node");
     }
 
-    // Move to first child to see which production we have
     ParseTreeIterator child = it.firstChild();
     int tokenId = getTokenId(child);
     int line = child.isTerminal() ? child.getToken().lineNumber : -1;
 
     if (tokenId == static_cast<int>(Proof_Lexer::TokenId::IDENT)) {
-        // Bool variable
-        std::string name = child.getLexeme();
-        return BoolExpr::makeVar(name, line);
+        return IntExpr::makeVar(child.getLexeme(), line);
     }
-    else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Bool_True)) {
-        return BoolExpr::makeTrue(line);
+    else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::NUMBER)) {
+        int64_t value = std::stoll(child.getLexeme());
+        return IntExpr::makeLit(value, line);
     }
-    else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Bool_False)) {
-        return BoolExpr::makeFalse(line);
+    else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Int_Neg)) {
+        child.moveToNextSibling(); // skip _Int_Neg
+        child.moveToNextSibling(); // skip OPEN_PAR
+        return IntExpr::makeNeg(readIntExpr(child), line);
     }
-    else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Bool_Not)) {
-        // _Bool_Not OPEN_PAR <BoolExpr> CLOSE_PAR
-        child.moveToNextSibling(); // Skip _Bool_Not
-        child.moveToNextSibling(); // Skip OPEN_PAR
-
-        BoolExprPtr arg = readBoolExpr(child);
-        return BoolExpr::makeNot(arg, line);
-    }
-    else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Bool_And)) {
-        // _Bool_And OPEN_PAR <BoolExpr> <BoolExpr> CLOSE_PAR
-        child.moveToNextSibling(); // Skip _Bool_And
-        child.moveToNextSibling(); // Skip OPEN_PAR
-
-        BoolExprPtr left = readBoolExpr(child);
+    else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Int_Add)) {
+        child.moveToNextSibling(); child.moveToNextSibling();
+        IntExprPtr left = readIntExpr(child);
         child.moveToNextSibling();
-        BoolExprPtr right = readBoolExpr(child);
-        return BoolExpr::makeAnd(left, right, line);
+        return IntExpr::makeAdd(left, readIntExpr(child), line);
     }
-    else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Bool_Or)) {
-        // _Bool_Or OPEN_PAR <BoolExpr> <BoolExpr> CLOSE_PAR
-        child.moveToNextSibling(); // Skip _Bool_Or
-        child.moveToNextSibling(); // Skip OPEN_PAR
-
-        BoolExprPtr left = readBoolExpr(child);
+    else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Int_Sub)) {
+        child.moveToNextSibling(); child.moveToNextSibling();
+        IntExprPtr left = readIntExpr(child);
         child.moveToNextSibling();
-        BoolExprPtr right = readBoolExpr(child);
-        return BoolExpr::makeOr(left, right, line);
+        return IntExpr::makeSub(left, readIntExpr(child), line);
+    }
+    else if (tokenId == static_cast<int>(Proof_Lexer::TokenId::_Int_Mul)) {
+        child.moveToNextSibling(); child.moveToNextSibling();
+        IntExprPtr left = readIntExpr(child);
+        child.moveToNextSibling();
+        return IntExpr::makeMul(left, readIntExpr(child), line);
     }
 
-    throw std::runtime_error("Unknown BoolExpr production");
+    throw std::runtime_error("Unknown IntExpr production");
 }
+

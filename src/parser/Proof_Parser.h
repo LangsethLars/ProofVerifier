@@ -34,7 +34,7 @@ public:
         _ProofBlock_ = 6,
         _Param_ = 7,
         _TypeExpr_ = 8,
-        _BoolExpr_ = 9,
+        _IntExpr_ = 9,
         _ProofStepList_ = 10,
         _ProofStep_ = 11,
         _AssumeStep_ = 12,
@@ -44,10 +44,7 @@ public:
         _CasesStep_ = 16,
         _ReflStep_ = 17,
         _TrivialStep_ = 18,
-        _ProofExpr_ = 19,
-        _BoolCaseList_ = 20,
-        _BoolCase_ = 21,
-        _BoolValue_ = 22
+        _ProofExpr_ = 19
     }; // End of enum class VariableId
 
 }; // End of class Proof_Parser

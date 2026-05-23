@@ -18,21 +18,18 @@ Ignore NL      = '\0A' | '\0D' | "\0D\0A" | "\0A\0D";
 # Identifiers, always starts with lower case letter
 # =================================================
 
-Token IDENT = [a-z] [_0-9A-Za-z]*;
+Token IDENT    = [a-z] [_0-9A-Za-z]*;
+Token NUMBER   = ('0' | [1-9][0-9]*) '-'?;
 
 # Keywords, never starts with lower case letter
 # =============================================
 
-Token _Bool             = "Bool";
+Token _Int              = "Int";
 
-Token _Bool_True        = "Bool.True";
-Token _Bool_False       = "Bool.False";
-
-Token _Bool_Not         = "Bool.Not";
-Token _Bool_And         = "Bool.And";
-Token _Bool_Or          = "Bool.Or";
-
-Token _Bool_Eq          = "Bool.Eq"; # returns Prop
+Token _Int_Add          = "Int.Add";
+Token _Int_Sub          = "Int.Sub";
+Token _Int_Mul          = "Int.Mul";
+Token _Int_Neg          = "Int.Neg";
 
 Token _Prop             = "Prop";
 
@@ -51,6 +48,8 @@ Token _Prop_AndIntro    = "Prop.AndIntro";
 Token _Prop_OrLeft      = "Prop.OrLeft";
 Token _Prop_OrRight     = "Prop.OrRight";
 Token _Prop_FalseElim   = "Prop.FalseElim";
+
+Token _Prop_Int_Eq      = "Prop.Int.Eq";    # Int.Eq(a b) returns Prop
 
 Token _Theorem          = "Theorem";
 Token _Proof            = "Proof";
@@ -80,7 +79,6 @@ Token _Fun          = "Fun";
 Token _Pi           = "Pi";
 Token _Type         = "Type";
 Token _Nat          = "Nat";
-Token _Int          = "Int";
 
 # Symbols
 # =======
@@ -126,7 +124,7 @@ Rule <Param>
     = OPEN_PAR IDENT COLON <TypeExpr> CLOSE_PAR;
 
 Skip <TypeExpr>
-    = _Bool
+    = _Int
     | _Prop;
 
 Rule <PropExpr>
@@ -138,15 +136,15 @@ Rule <PropExpr>
     | _Prop_Or      OPEN_PAR <PropExpr> <PropExpr> CLOSE_PAR
     | _Prop_Implies OPEN_PAR <PropExpr> <PropExpr> CLOSE_PAR
     | _Prop_Iff     OPEN_PAR <PropExpr> <PropExpr> CLOSE_PAR
-    | _Bool_Eq      OPEN_PAR <BoolExpr> <BoolExpr> CLOSE_PAR;
+    | _Prop_Int_Eq  OPEN_PAR <IntExpr>  <IntExpr>  CLOSE_PAR;
 
-Rule <BoolExpr>
+Rule <IntExpr>
     = IDENT
-    | _Bool_True
-    | _Bool_False
-    | _Bool_Not   OPEN_PAR <BoolExpr> CLOSE_PAR
-    | _Bool_And   OPEN_PAR <BoolExpr> <BoolExpr> CLOSE_PAR
-    | _Bool_Or    OPEN_PAR <BoolExpr> <BoolExpr> CLOSE_PAR;
+    | NUMBER
+    | _Int_Neg  OPEN_PAR <IntExpr>            CLOSE_PAR
+    | _Int_Add  OPEN_PAR <IntExpr> <IntExpr>  CLOSE_PAR
+    | _Int_Sub  OPEN_PAR <IntExpr> <IntExpr>  CLOSE_PAR
+    | _Int_Mul  OPEN_PAR <IntExpr> <IntExpr>  CLOSE_PAR;
 
 Rule <ProofBlock>
     = _Proof <ProofStepList> _End;
@@ -182,22 +180,6 @@ Rule <ReflStep>
 Rule <TrivialStep>
     = _Trivial;
 
-Rule <CasesStep>
-    = _Cases IDENT <BoolCaseList> _End;
-
-Rule <BoolCaseList>
-    = <BoolCase> <BoolCase>;
-
-Rule <BoolCase>
-    = _Case <BoolValue> FAT_ARROW <ProofStepList>;
-
-# <ProofStepList> ends naturally when the parser meets _Case or _End,
-# because _Case and _End is not the start on <ProofStep>.
-
-Rule <BoolValue>
-    = _Bool_False
-    | _Bool_True;
-
 Rule <ProofExpr>
     = IDENT
     | _Refl
@@ -215,7 +197,7 @@ Rule <ProofExpr>
 # The proof checker maintains:
 #
 # - A context of variables:
-#     x : Bool
+#     x : Int
 #     p : Prop
 #
 # - A context of proof assumptions:
@@ -230,18 +212,6 @@ Rule <ProofExpr>
 # - adds a proof assumption, or
 # - closes the current goal.
 #
-# First implemented steps:
-#
-# Trivial:
-#   closes goal Prop.True.
-#
-# Refl:
-#   closes goal Bool.Eq(a b) if normalizeBool(a) == normalizeBool(b).
-#
-# Cases x:
-#   requires x : Bool.
-#   creates two subgoals:
-#     goal[x := Bool.False]
-#     goal[x := Bool.True]
+# See Examples.txt for implemented steps.
 
 # End of file
