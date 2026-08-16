@@ -1,0 +1,266 @@
+
+# Prop is hard coded and includes
+#    True and False,
+#    variables declared to be of type Prop,
+#    and all functions that returns Prop.
+#
+# Eval(e) will evaluate e as far as possible.
+#
+# Expression(e) will return e as an expression after substitute known variables without doing Eval.
+
+
+
+Def Prop.not (n : Prop) : Prop :=
+
+    Let nVal = Eval(n)                      # Recursive evaluate n and leave result in nVal
+
+    Match nVal                              # Must match all constructors of Prop
+
+        Case Prop.True =>                   # Matches the first const constructor
+            Prop.False
+
+        Case Prop.False =>                  # Matches the second const constructor
+            Prop.True
+
+        Else =>                             # nVal can not be fully evaluated, but maybe it is simplified
+            Expression(Prop.not(nVal))      # Return simplified/reduced proposition
+
+    End
+
+End
+
+
+
+Def Prop.and (n1 : Prop) (n2 : Prop) : Prop :=
+
+    Let n1Val = Eval(n1)
+    Let n2Val = Eval(n2)
+
+    Match n1Val
+
+        Case Prop.True =>
+            Expression(n2Val)
+
+        Case Prop.False =>
+            Prop.False
+
+        Else =>
+            Match n2Val
+                Case Prop.True =>
+                    Expression(n1Val)
+                Case Prop.False =>
+                    Prop.False
+                Else =>
+                    Expression(Prop.and(n1Val n2Val))
+            End
+
+    End
+
+End
+
+
+
+Def Prop.or (n1 : Prop) (n2 : Prop) : Prop :=
+
+    Let n1Val = Eval(n1)
+    Let n2Val = Eval(n2)
+
+    Match n1Val
+
+        Case Prop.True =>
+            Prop.True
+
+        Case Prop.False =>
+            Expression(n2Val)
+
+        Else =>
+            Match n2Val
+                Case Prop.True =>
+                    Prop.True
+                Case Prop.False =>
+                    Expression(n1Val)
+                Else =>
+                    Expression(Prop.or(n1Val n2Val))
+            End
+
+    End
+
+End
+
+
+
+Def Prop.imp (n1 : Prop) (n2 : Prop) : Prop :=
+
+    Let n1Val = Eval(n1)
+    Let n2Val = Eval(n2)
+
+    Match n2Val
+
+        Case Prop.True =>
+            Prop.True
+
+        Case Prop.False =>
+            Match n1Val
+                Case Prop.True =>
+                    Prop.False
+                Case Prop.False =>
+                    Prop.True
+                Else =>
+                    Expression(Prop.not(n1Val))
+            End
+
+        Else =>
+
+            Expression(Prop.imp(n1Val n2Val))
+
+    End
+
+End
+
+
+
+Inductive nat : Type
+    | zero              # First constructor, represents the natural number 0
+    | succ(_ : nat)     # Second constructor, represents the successor function, which adds 1 to a natural number
+End
+
+
+
+Def nat.add (n1 : nat) (n2 : nat) : nat :=
+    Let n1Val = Eval(n1)
+    Let n2Val = Eval(n2)
+    Match n2Val                             # Must match both constructors of nat
+        Case nat.zero =>                    # Matches the first constructor, which represents 0
+            Expression(n1Val)
+        Case nat.succ(n2Val_) =>            # Matches the second constructor, which represents the successor function
+            Eval(nat.succ(nat.add(n1Val n2Val_)))
+        Else =>                             # Unknown variables are involved and can not be fully reduced
+            Expression(nat.add(n1Val n2Val))
+    End
+End
+
+
+
+Def nat.mul (n1 : nat) (n2 : nat) : nat :=
+    Let n1Val = Eval(n1)
+    Let n2Val = Eval(n2)
+    Match n2Val
+        Case nat.zero =>
+            nat.zero                        # No need to use Expression, no variables
+        Case nat.succ(n2Val_) =>
+            Eval(nat.add(n1Val nat.mul(n1Val n2Val_)))
+        Else =>                             # Unknown variables are involved and can not be fully reduced
+            Expression(nat.mul(n1Val n2Val))
+    End
+End
+
+
+
+# This will add to the knowledge of Prop
+Def nat.eq (n1 : nat) (n2 : nat) : Prop :=
+    Let n1Val = Eval(n1)
+    Let n2Val = Eval(n2)
+    Match n2Val
+        Case nat.zero =>
+            Match n1Val
+                Case nat.zero =>
+                    Prop.True
+                Case nat.succ(n1Val_) =>
+                    Prop.False
+                Else =>
+                    Expression(nat.eq(n1Val n2Val))
+            End
+        Case nat.succ(n2Val_) =>
+            Match n1Val
+                Case nat.zero =>
+                    Prop.False
+                Case nat.succ(n1Val_) =>
+                    Eval(nat.eq(n1Val_ n2Val_))
+                Else =>
+                    Expression(nat.eq(n1Val n2Val))
+            End
+        Else =>
+            Expression(nat.eq(n1Val n2Val))
+    End
+End
+
+
+
+# To make induction work
+RegisterEquality nat.eq
+
+
+
+# Just to finish 2+2=4
+Theorem nat_two_plus_two :
+    nat.eq(nat.add(nat.succ(nat.succ(nat.zero)) nat.succ(nat.succ(nat.zero))) nat.succ(nat.succ(nat.succ(nat.succ(nat.zero)))))
+Proof
+    Eval                                    # Let Goal = Eval(Goal)
+    Trivial                                 # Since Goal is reduced to Prop.True it is trivial
+End
+
+
+
+Theorem mul_zero_right (n : nat) :
+    nat.eq(nat.mul(n nat.zero) nat.zero)    # Goal to be proved
+Proof
+    Eval                                    # Let Goal = Eval(Goal)
+    Trivial                                 # Since Goal is reduced to Prop.True it is trivial
+End
+
+
+
+Theorem mul_zero_left (n : nat) :           # n is a pure local variable
+    nat.eq(nat.mul(nat.zero n) nat.zero)
+Proof
+    Induction n                             # Since n is a pure local variable, it is enough to test the two constructors
+        Case nat.zero =>                    # n = nat.zero
+            Eval                            # Eval(nat.eq(nat.mul(nat.zero nat.zero) nat.zero)) =>
+                                            # Eval(nat.eq(nat.zero nat.zero)) =>
+                                            # Prop.True
+            Trivial
+        Case nat.succ(n_) ih =>             # n = nat.succ(n_)
+                                            # ih = nat.eq(nat.mul(nat.zero n_) nat.zero)
+            Eval                            # Eval(nat.eq(nat.mul(nat.zero nat.succ(n_)) nat.zero)) =>
+                                            # nat.eq(nat.add(nat.zero nat.mul(nat.zero n_)) nat.zero)
+            Rewrite ih nat.mul(nat.zero n_) => nat.zero
+                                            # nat.eq(nat.add(nat.zero nat.zero) nat.zero)
+            Eval                            # Eval(nat.eq(nat.add(nat.zero nat.zero) nat.zero)) =>
+                                            # Eval(nat.eq(nat.zero nat.zero)) =>
+                                            # Prop.True
+            Trivial
+    End
+End
+
+
+
+Theorem add_zero_right (n : nat) :
+    nat.eq(nat.add(n nat.zero) n)           # Goal to be proved
+Proof
+    Eval                                    # Let Goal = Eval(Goal)
+    Trivial                                 # Since Goal is reduced to Prop.True it is trivial
+End
+
+
+
+Theorem add_zero_left (n : nat) :           # n is a pure local variable
+    nat.eq(nat.add(nat.zero n) n)
+Proof
+    Induction n                             # Since n is a pure local variable, it is enough to test the two constructors
+        Case nat.zero =>                    # n = nat.zero
+            Eval                            # Eval(nat.eq(nat.add(nat.zero nat.zero) nat.zero)) =>
+                                            # Eval(nat.eq(nat.zero nat.zero)) =>
+                                            # Prop.True
+            Trivial
+        Case nat.succ(n_) ih =>             # n = nat.succ(n_)
+                                            # ih = nat.eq(nat.add(nat.zero n_) n_)
+            Eval                            # Eval(nat.eq(nat.add(nat.zero nat.succ(n_)) nat.succ(n_))) =>
+                                            # nat.eq(nat.succ(nat.add(nat.zero n_)) nat.succ(n_))
+            Rewrite ih nat.add(nat.zero n_) => n_
+                                            # nat.eq(nat.succ(n_) nat.succ(n_))
+            Eval                            # Eval(nat.eq(nat.succ(n_) nat.succ(n_))) =>
+                                            # Eval(nat.eq(n_ n_)) =>
+                                            # nat.eq(n_ n_)
+            Trivial                         # This will fail, not yot yet Trivial in current implementation
+    End
+End

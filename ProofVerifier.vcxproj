@@ -141,25 +141,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\ast\ASTBuilder.cpp" />
-    <ClCompile Include="src\ast\ASTPrinter.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\parser\LexerBase.cpp" />
     <ClCompile Include="src\parser\ParserBase.cpp" />
     <ClCompile Include="src\parser\ParseTreeIterator.cpp" />
     <ClCompile Include="src\parser\Proof_Lexer.cpp" />
     <ClCompile Include="src\parser\Proof_Parser.cpp" />
-    <ClCompile Include="src\proof\IntExpr.cpp" />
-    <ClCompile Include="src\proof\ParamManager.cpp" />
-    <ClCompile Include="src\proof\ParamReader.cpp" />
-    <ClCompile Include="src\proof\PropExpr.cpp" />
-    <ClCompile Include="src\proof\PropExprReader.cpp" />
-    <ClCompile Include="src\proof\Verifier.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\ast\ASTBuilder.h" />
-    <ClInclude Include="src\ast\ASTPrinter.h" />
-    <ClInclude Include="src\ast\ASTTypes.h" />
     <ClInclude Include="src\parser\LexerBase.h" />
     <ClInclude Include="src\parser\LexerTypes.h" />
     <ClInclude Include="src\parser\ParserBase.h" />
@@ -167,21 +156,10 @@
     <ClInclude Include="src\parser\ParseTreeIterator.h" />
     <ClInclude Include="src\parser\Proof_Lexer.h" />
     <ClInclude Include="src\parser\Proof_Parser.h" />
-    <ClInclude Include="src\proof\IntExpr.h" />
-    <ClInclude Include="src\proof\ParamManager.h" />
-    <ClInclude Include="src\proof\ParamReader.h" />
-    <ClInclude Include="src\proof\ProofContext.h" />
-    <ClInclude Include="src\proof\PropExpr.h" />
-    <ClInclude Include="src\proof\PropExprReader.h" />
-    <ClInclude Include="src\proof\Verifier.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="docs\AST_Documentation.md" />
-    <None Include="docs\ParamManager_Documentation.md" />
-    <None Include="docs\PropExpr_Documentation.md" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="docs\Proof.txt" />
+    <Text Include="scripts\Test.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

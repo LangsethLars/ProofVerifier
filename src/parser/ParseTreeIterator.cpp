@@ -103,7 +103,7 @@ int ParseTreeIterator::getVariableIdNoThrow() const {
     if (isValid()) {
         int variableId = -1 - m_ParseTree[m_NodeIndex].symbolIdOrTokenSequenceNo;
         if (variableId >= 0) {
-            return variableId;
+			return variableId; //  Check against g_VariableClasses.size() if needed
         }
     }
     return -1;

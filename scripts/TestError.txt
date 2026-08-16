@@ -1,3 +1,0 @@
-Theorem test_duplicate (p : Prop) (p : Prop) : p
-Proof
-End
